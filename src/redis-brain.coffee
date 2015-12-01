@@ -8,7 +8,7 @@
 #
 # Sentinel Configuration:
 #   REDIS_SENTINEL_URL is required.
-#   URL format: sentinel://<master>@<host>:<port>[/<brain_prefix>]
+#   URL format: sentinel://<host>:<port>/<master>[/<brain_prefix>]
 #   If not provided, '<brain_prefix>' will default to 'hubot'.
 #
 #
@@ -41,27 +41,28 @@ module.exports = (robot) ->
   else
     'redis://localhost:6379'
 
-
   if redisUrlEnv?
     robot.logger.info "hubot-redis-brain: Discovered redis from #{redisUrlEnv} environment variable"
   else
     robot.logger.info "hubot-redis-brain: Using default redis on localhost:6379"
 
-  if useSentinel?
+  if useSentinel
     info = Url.parse sentinelUrl, true
+    parts = info.path?.split('/')
+    prefix = parts[2] or 'hubot'
+    name = parts[1] or 'mymaster'
     sentinels = [{ host: info.hostname, port: info.port}]
     client = new Redis({
       sentinels: sentinels,
-      name: info.auth
+      name: name
     });
   else
     info   = Url.parse redisUrl, true
     prefix = info.path?.replace('/', '') or 'hubot'
     client = new Redis({
-     host: info.host,
+     host: info.hostname,
      port: info.port,
-     passwd: info.auth,
-     db: prefix
+     passwd: info.auth
     });
 
   robot.brain.setAutoSave false
